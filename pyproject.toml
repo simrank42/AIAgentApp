@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "chat-backend"
+version = "0.1.0"
+description = "FastAPI AI chat backend with JWT auth, SQLite, and streaming WebSockets"
+requires-python = ">=3.11,<3.12"
+readme = "README.md"
+dependencies = [
+  "fastapi==0.115.2",
+  "uvicorn[standard]==0.30.6",
+  "pydantic[email]==2.9.2",
+  "SQLAlchemy==2.0.36",
+  "alembic==1.13.3",
+  "httpx==0.27.2",
+  "python-dotenv==1.0.1",
+  "passlib[argon2]==1.7.4",
+  "PyJWT==2.9.0",
+  "huggingface_hub>=0.35.0",
+  "typing-extensions>=4.12.2",
+  "Pillow>=10.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "black==24.8.0",
+  "ruff==0.6.9",
+  "pytest==8.3.3",
+  "pytest-asyncio==0.24.0",
+  "httpx==0.27.2",
+  "bandit==1.7.5",
+  "safety==2.3.5",
+  "pytest-security==0.0.5",
+  "pytest-cov==4.1.0",
+]
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+select = ["E","F","I","UP"]
+ignore = []
+
+[tool.ruff.format]
+quote-style = "double"

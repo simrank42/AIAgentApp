@@ -1,0 +1,67 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Build
+build/
+dist/
+*.egg-info/
+
+# Git
+.git/
+.gitignore
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Frontend (built files served from backend/static)
+frontend/
+
+# Documentation (not needed in production image)
+DEPLOY_TO_RENDER.md
+DEPLOYMENT_INSTRUCTIONS.md
+DEPLOYMENT_ISSUES_FIXED.md
+FINAL_DEPLOYMENT_SUMMARY.md
+SETUP_COMPLETE.md
+SECURITY.md
+README.md
+
+# Development tools
+Makefile
+
+# Source maps (debugging files, not needed in production)
+*.map
+
+# Alembic migration README (generic template file)
+app/db/migrations/README

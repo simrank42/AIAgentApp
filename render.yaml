@@ -1,0 +1,77 @@
+services:
+  - type: web
+    name: chat-backend
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    dockerCommand: null  # Uses CMD from Dockerfile
+    
+    # Health check
+    healthCheckPath: /health
+    
+    # Disk for persistent SQLite database
+    # Note: For free tier, disk is ephemeral - Litestream provides persistence via R2
+    disk:
+      name: app-data
+      mountPath: /data
+      sizeGB: 1
+    
+    # Environment variables
+    envVars:
+      # Application
+      - key: APP_ENV
+        value: prod
+      
+      # Security - MUST be set to a secure random value in production
+      - key: SECRET_KEY
+        generateValue: true
+      
+      # Database - must use absolute path for Docker
+      - key: DATABASE_URL
+        value: sqlite:////data/app.db
+      
+      # CORS - Update with your frontend URL
+      - key: CORS_ORIGINS
+        value: https://your-frontend-domain.com,http://localhost:4200
+      
+      # Security Settings
+      - key: ENABLE_SECURITY_HEADERS
+        value: "true"
+      - key: ENABLE_CORS
+        value: "true"
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: COOKIE_SAMESITE
+        value: strict
+      
+      # Rate Limiting
+      - key: ENABLE_RATE_LIMITING
+        value: "true"
+      
+      # Logging
+      - key: LOG_LEVEL
+        value: INFO
+      - key: LOG_FORMAT
+        value: json
+      
+      # AI Provider Configuration
+      # Change to 'mock' for testing without AI, or 'huggingface' for production
+      - key: AI_PROVIDER
+        value: huggingface
+      - key: HF_TOKEN
+        sync: false  # Set manually in Render dashboard
+      - key: HF_MODEL
+        value: meta-llama/Llama-3.1-8B-Instruct
+      
+      # Litestream/R2 Configuration - MUST be set manually in Render dashboard
+      # These sync the SQLite database to Cloudflare R2 for persistence
+      # ⚠️ SECURITY: Never put real values here! Set them in Render Dashboard → Environment Variables
+      - key: LITESTREAM_ACCESS_KEY_ID
+        sync: false  # Set manually in Render Dashboard - Get from Cloudflare R2 API Token
+      - key: LITESTREAM_SECRET_ACCESS_KEY
+        sync: false  # Set manually in Render Dashboard - Get from Cloudflare R2 API Token
+      - key: LITESTREAM_BUCKET
+        value: aiagentapp
+      - key: LITESTREAM_ENDPOINT
+        sync: false  # Set manually: https://your-account-id.r2.cloudflarestorage.com (get from R2 dashboard)
