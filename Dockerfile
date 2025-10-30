@@ -27,6 +27,7 @@ FROM python:3.11-slim
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     curl \
+    procps \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Litestream
@@ -34,10 +35,10 @@ RUN curl -fsSL https://github.com/benbjohnson/litestream/releases/download/v0.3.
     dpkg -i /tmp/litestream.deb && \
     rm /tmp/litestream.deb
 
-# Create app user
+# Create app user and data directory for database
 RUN useradd -m -u 1000 appuser && \
-    mkdir -p /data /app && \
-    chown -R appuser:appuser /data /app
+    mkdir -p /app/data && \
+    chown -R appuser:appuser /app
 
 # Copy application code
 WORKDIR /app

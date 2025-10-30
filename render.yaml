@@ -10,12 +10,8 @@ services:
     # Health check
     healthCheckPath: /health
     
-    # Disk for persistent SQLite database
-    # Note: For free tier, disk is ephemeral - Litestream provides persistence via R2
-    disk:
-      name: app-data
-      mountPath: /data
-      sizeGB: 1
+    # Note: No persistent disk configured - database is stored in container filesystem
+    # Litestream syncs to R2 for persistence (database restored on each deployment)
     
     # Environment variables
     envVars:
@@ -27,9 +23,9 @@ services:
       - key: SECRET_KEY
         generateValue: true
       
-      # Database - must use absolute path for Docker
+      # Database - stored in container filesystem (ephemeral), persisted via Litestream to R2
       - key: DATABASE_URL
-        value: sqlite:////data/app.db
+        value: sqlite:////app/data/app.db
       
       # CORS - Update with your frontend URL
       - key: CORS_ORIGINS

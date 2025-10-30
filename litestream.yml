@@ -2,7 +2,7 @@
 
 # Database configuration
 dbs:
-  - path: /data/app.db
+  - path: /app/data/app.db
     replicas:
       - type: s3
         bucket: ${LITESTREAM_BUCKET}

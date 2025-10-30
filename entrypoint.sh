@@ -3,10 +3,14 @@ set -e
 
 echo "🚀 Starting application..."
 
+# Database path - using /app/data (container filesystem, persisted via Litestream to R2)
+DB_PATH="/app/data/app.db"
+DB_DIR="/app/data"
+
 # Function to handle graceful shutdown
 cleanup() {
     echo "📤 Received shutdown signal, syncing Litestream..."
-    litestream replicas sync /data/app.db -config /app/litestream.yml || true
+    litestream replicas sync "$DB_PATH" -config /app/litestream.yml || true
     echo "✅ Litestream sync complete"
     exit 0
 }
@@ -14,12 +18,9 @@ cleanup() {
 # Set up signal handlers
 trap cleanup SIGTERM SIGINT
 
-# Database path
-DB_PATH="/data/app.db"
-DB_DIR="/data"
-
-# Ensure /data directory exists
+# Ensure database directory exists (owned by appuser, no permission issues)
 mkdir -p "$DB_DIR"
+echo "✅ Database directory ready at $DB_DIR"
 
 # Validate Litestream credentials before attempting to use them
 LITESTREAM_ACCESS_KEY_ID="${LITESTREAM_ACCESS_KEY_ID:-}"
