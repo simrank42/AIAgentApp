@@ -59,7 +59,7 @@ fi
 # Start Litestream replication in background only if credentials are configured
 if [ "$LITESTREAM_ENABLED" = "true" ]; then
     echo "🔄 Starting Litestream replication..."
-    litestream replicate /data/app.db -config /app/litestream.yml &
+    litestream replicate "$DB_PATH" -config /app/litestream.yml &
     
     # Wait a moment for Litestream to initialize
     sleep 2
