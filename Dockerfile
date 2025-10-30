@@ -8,10 +8,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Litestream
-RUN curl -fsSL https://github.com/benbjohnson/litestream/releases/download/v0.3.13/litestream-v0.3.13-linux-amd64.deb -o /tmp/litestream.deb && \
-    dpkg -i /tmp/litestream.deb && \
-    rm /tmp/litestream.deb
+# Note: Litestream is only installed in production stage, not needed in builder stage
 
 # Copy dependency files
 WORKDIR /app
