@@ -21,47 +21,84 @@ class CaptchaGenerator:
         Returns: (captcha_id, base64_image, expires_at)
         """
         # Generate random text (4-6 characters)
-        captcha_text = ''.join(random.choices(string.ascii_uppercase + string.digits, k=random.randint(4, 6)))
+        # Exclude confusing characters: 0 (zero), O (letter O), 1 (one), I (letter I), 5 (five), S (letter S)
+        # This makes the captcha easier to read and reduces user errors
+        chars = string.ascii_uppercase.replace('O', '').replace('I', '').replace('S', '') + \
+                string.digits.replace('0', '').replace('1', '').replace('5', '')
+        captcha_text = ''.join(random.choices(chars, k=random.randint(4, 5)))  # 4-5 chars for better readability
         captcha_id = str(uuid.uuid4())
         
-        # Create image
-        width, height = 200, 80
-        image = Image.new('RGB', (width, height), color='white')
+        # Create image - larger size for better visibility
+        width, height = 250, 100
+        image = Image.new('RGB', (width, height), color=(245, 245, 245))  # Light gray background
         draw = ImageDraw.Draw(image)
         
-        # Try to use a font, fallback to default if not available
-        try:
-            font_size = 32
-            font = ImageFont.truetype("arial.ttf", font_size)
-        except:
+        # Try to use a better font with fallbacks
+        font_size = 48
+        font = None
+        font_paths = [
+            "arial.ttf",
+            "Arial.ttf",
+            "/System/Library/Fonts/Supplemental/Arial.ttf",  # macOS
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",  # Linux
+            "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",  # Linux
+        ]
+        
+        for font_path in font_paths:
+            try:
+                font = ImageFont.truetype(font_path, font_size)
+                break
+            except:
+                continue
+        
+        if font is None:
+            # Fallback to default font
             font = ImageFont.load_default()
         
-        # Add some noise/background
-        for _ in range(100):
-            x = random.randint(0, width)
-            y = random.randint(0, height)
-            draw.point((x, y), fill=(random.randint(100, 200), random.randint(100, 200), random.randint(100, 200)))
-        
-        # Draw text with some distortion
-        text_width = draw.textlength(captcha_text, font=font)
+        # Draw text with proper spacing - clearer and more readable
+        # Calculate total text width first
+        char_spacing = 30
+        text_width = char_spacing * len(captcha_text)
         text_x = (width - text_width) // 2
-        text_y = (height - font_size) // 2
+        text_y = (height - font_size) // 2 - 5  # Slightly higher for better visibility
         
+        # Draw each character with better contrast
         for i, char in enumerate(captcha_text):
-            char_x = text_x + i * (text_width // len(captcha_text)) + random.randint(-5, 5)
-            char_y = text_y + random.randint(-5, 5)
+            # Calculate character position with proper spacing
+            char_x = text_x + i * char_spacing + random.randint(-3, 3)
+            char_y = text_y + random.randint(-2, 2)
             
-            # Random color for each character
-            color = (random.randint(0, 100), random.randint(0, 100), random.randint(0, 100))
+            # Use darker, more contrasting colors for better visibility
+            # Mix of dark blue, dark green, dark red for good contrast
+            color_options = [
+                (30, 60, 120),   # Dark blue
+                (80, 40, 20),    # Dark brown
+                (20, 80, 40),    # Dark green
+                (100, 30, 30),   # Dark red
+                (40, 40, 100),   # Dark purple
+            ]
+            color = random.choice(color_options)
+            
+            # Draw character with slight rotation effect
             draw.text((char_x, char_y), char, fill=color, font=font)
         
-        # Add some lines for extra distortion
-        for _ in range(3):
-            start_x = random.randint(0, width)
+        # Add subtle noise in background (less distracting)
+        for _ in range(50):  # Reduced noise
+            x = random.randint(0, width)
+            y = random.randint(0, height)
+            # Light gray noise that doesn't interfere with text
+            noise_color = (random.randint(220, 240), random.randint(220, 240), random.randint(220, 240))
+            draw.point((x, y), fill=noise_color)
+        
+        # Add subtle lines (not too distracting)
+        for _ in range(2):  # Reduced lines
+            start_x = random.randint(0, width // 4)
             start_y = random.randint(0, height)
-            end_x = random.randint(0, width)
+            end_x = random.randint(3 * width // 4, width)
             end_y = random.randint(0, height)
-            draw.line([(start_x, start_y), (end_x, end_y)], fill=(random.randint(100, 200), random.randint(100, 200), random.randint(100, 200)), width=2)
+            # Light gray lines
+            line_color = (random.randint(200, 220), random.randint(200, 220), random.randint(200, 220))
+            draw.line([(start_x, start_y), (end_x, end_y)], fill=line_color, width=1)
         
         # Convert to base64
         buffer = io.BytesIO()
@@ -109,8 +146,13 @@ class CaptchaGenerator:
         # Increment attempts
         captcha_data['attempts'] += 1
         
-        # Check answer (trim whitespace and compare case-insensitively)
-        if answer.strip().upper() == captcha_data['text'].upper():
+        # Normalize answer - remove all whitespace and compare case-insensitively
+        # Also remove common confusing characters (0/O, 1/I, etc.)
+        normalized_answer = ''.join(answer.strip().upper().split())
+        normalized_captcha = captcha_data['text'].upper()
+        
+        # Check answer (case-insensitive, whitespace-insensitive)
+        if normalized_answer == normalized_captcha:
             # Mark as verified but don't delete yet - will be deleted after successful login
             captcha_data['verified'] = True
             captcha_data['verified_at'] = datetime.utcnow()
@@ -120,7 +162,8 @@ class CaptchaGenerator:
             if remaining <= 0:
                 del self.captcha_storage[captcha_id]
                 return False, "Too many attempts", 0
-            return False, f"Invalid CAPTCHA. {remaining} attempts remaining", remaining
+            # Provide helpful error message
+            return False, f"Invalid CAPTCHA. {remaining} attempt(s) remaining. Please check: O vs 0, I vs 1, etc.", remaining
     
     def is_captcha_verified(self, captcha_id: str, ip_address: str) -> bool:
         """
