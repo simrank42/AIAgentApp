@@ -89,7 +89,7 @@ class Settings:
     # AI
     AI_PROVIDER: str = os.getenv("AI_PROVIDER", "mock")
     HF_API_KEY: str | None = os.getenv("HF_TOKEN") or os.getenv("HF_API_KEY") or None
-    HF_MODEL: str = os.getenv("HF_MODEL", "meta-llama/Llama-3.1-8B-Instruct")
+    HF_MODEL: str = os.getenv("HF_MODEL", "meta-llama/Llama-3.1-8B-Instruct")  # Default to a chat-compatible model
     
     # JWT
     ALGORITHM: str = "HS256"

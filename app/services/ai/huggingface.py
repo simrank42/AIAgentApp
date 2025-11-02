@@ -51,14 +51,34 @@ class HuggingFaceAdapter(BaseAIAdapter):
 
         except Exception as e:
             error_msg = str(e)
+            error_dict = {}
+            try:
+                if hasattr(e, 'response'):
+                    error_dict = getattr(e.response, 'json', lambda: {})() or {}
+            except:
+                pass
+            
             if "401" in error_msg or "unauthorized" in error_msg.lower():
                 env_hint = "Render Dashboard → Environment Variables" if settings.is_production else "environment variables"
                 yield f"\n\n❌ **Error**: Invalid HuggingFace API key. "
                 yield f"Please check your `HF_TOKEN` in {env_hint}. "
                 if settings.is_production:
                     yield "In production, verify the value is set in Render Dashboard → Your Service → Environment Variables."
+            elif "model_not_supported" in error_msg.lower() or "not a chat model" in error_msg.lower() or error_dict.get("code") == "model_not_supported":
+                yield f"\n\n❌ **Error**: Model `{model}` does not support chat completions on HuggingFace Inference API.\n\n"
+                yield "**Supported Chat Models** (update HF_MODEL in Render Dashboard):\n"
+                yield "- `meta-llama/Llama-3.1-8B-Instruct` ✅\n"
+                yield "- `meta-llama/Llama-3.2-3B-Instruct` ✅\n"
+                yield "- `Qwen/Qwen2.5-7B-Instruct` ✅\n"
+                yield "- `google/gemma-2-9b-it` ✅\n"
+                yield "- `HuggingFaceH4/zephyr-7b-beta` ✅\n\n"
+                yield f"Current model `{model}` needs to be changed to one of the above."
             elif "404" in error_msg or "not found" in error_msg.lower():
-                yield f"\n\n❌ **Error**: Model `{model}` not found or not available on HuggingFace Inference API.\n\nTry one of these models:\n- `mistralai/Mistral-7B-Instruct-v0.3`\n- `HuggingFaceH4/zephyr-7b-beta`\n- `meta-llama/Llama-3.2-3B-Instruct`"
+                yield f"\n\n❌ **Error**: Model `{model}` not found or not available on HuggingFace Inference API.\n\n"
+                yield "**Try these supported chat models**:\n"
+                yield "- `meta-llama/Llama-3.1-8B-Instruct`\n"
+                yield "- `meta-llama/Llama-3.2-3B-Instruct`\n"
+                yield "- `Qwen/Qwen2.5-7B-Instruct`\n"
             elif "429" in error_msg or "rate limit" in error_msg.lower():
                 yield "\n\n❌ **Error**: Rate limit exceeded. HuggingFace free tier has usage limits. Please try again in a few minutes."
             elif "503" in error_msg or "loading" in error_msg.lower():
