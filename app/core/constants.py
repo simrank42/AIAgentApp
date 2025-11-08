@@ -100,14 +100,20 @@ USERNAME_PATTERN = re.compile(
 
 # SQL Injection Prevention Patterns
 SQL_INJECTION_PATTERNS = [
-    r'(\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|UNION)\b)',
-    r'(\b(OR|AND)\s+\d+\s*=\s*\d+)',
-    r'(\b(OR|AND)\s+[\'"][^\'"]*[\'"]\s*=\s*[\'"][^\'"]*[\'"])',
-    r'(\b(OR|AND)\s+[\'"][^\'"]*[\'"]\s*LIKE\s*[\'"][^\'"]*[\'"])',
-    r'(;|\-\-|\#|/\*|\*/)',
-    r'(\b(UNION|SELECT)\s+.*\b(UNION|SELECT)\b)',
-    r'(\b(INSERT|UPDATE|DELETE)\s+INTO\b)',
-    r'(\b(DROP|CREATE|ALTER)\s+(TABLE|DATABASE|INDEX)\b)',
+    r'\bselect\s+.+\s+from\b',
+    r'\binsert\s+into\s+\w+',
+    r'\bupdate\s+\w+\s+set\b',
+    r'\bdelete\s+from\s+\w+',
+    r'\b(drop|create|alter)\s+(table|database|index)\b',
+    r'\bunion\s+select\b',
+    r'\bexec\s+(sp_|xp_)?\w+',
+    r'\b(or|and)\s+\d+\s*=\s*\d+\b',
+    r'\b(or|and)\s+[\'"][^\'"]*[\'"]\s*=\s*[\'"][^\'"]*[\'"]',
+    r'\b(or|and)\s+[\'"][^\'"]*[\'"]\s*like\s*[\'"][^\'"]*[\'"]',
+    r';',
+    r'--',
+    r'/\*',
+    r'\*/',
 ]
 
 # XSS Prevention Patterns
