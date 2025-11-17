@@ -1,6 +1,6 @@
-# Botbuddy
+# BotBuddy
 
-Botbuddy is an intelligent AI chat application backend that provides real-time conversational AI experiences through WebSocket streaming. The platform supports multiple AI providers and offers a secure, production-ready API with comprehensive authentication and data protection features.
+BotBuddy is an intelligent AI chat application that provides real-time conversational AI experiences through WebSocket streaming. The platform supports multiple AI providers and offers a secure, production-ready API with comprehensive authentication and data protection features.
 
 **Live Application**: [https://botbuddy-x9k4.onrender.com/](https://botbuddy-x9k4.onrender.com/)
 
@@ -8,7 +8,6 @@ Botbuddy is an intelligent AI chat application backend that provides real-time c
 
 - **JWT Authentication**: Secure email/password authentication with access and refresh tokens
 - **WebSocket Streaming**: Real-time AI chat with token-by-token streaming for responsive user experience
-- **Multiple AI Providers**: Support for Mock (testing), Hugging Face, and OpenAI integrations
 - **Agent System**: Pre-configured AI agents for different use cases (General, Coder, Security Analyst)
 - **Session Management**: Persistent chat sessions with message history
 - **Database Persistence**: SQLite database with Litestream replication to Cloudflare R2 for reliable data backup
