@@ -59,8 +59,8 @@ dbs:
         secret-access-key: ${LITESTREAM_SECRET_ACCESS_KEY}
         region: auto
         
-        # Retention policy: keep last 7 days of snapshots
-        retention: 7d
+        # Retention policy: keep last 7 days of snapshots (168 hours)
+        retention: 168h
         
         # Sync interval: replicate changes every 1 hour (to reduce R2 costs)
         # Each sync counts as 1 Class A operation (\$4.50 per million)
