@@ -8,7 +8,7 @@ if settings.DATABASE_URL.startswith("sqlite"):
     # Enable WAL mode for Litestream compatibility
     connect_args = {
         "check_same_thread": False,
-        "timeout": 20,  # Set timeout for database operations
+        "timeout": 30,  # Set timeout for database operations (increased for Litestream)
     }
 
 # SQLite file DB (synchronous)
@@ -27,7 +27,8 @@ def set_sqlite_pragma(dbapi_conn, connection_record):
         cursor = dbapi_conn.cursor()
         cursor.execute("PRAGMA journal_mode=WAL")
         cursor.execute("PRAGMA synchronous=NORMAL")
-        cursor.execute("PRAGMA busy_timeout=5000")
+        # Increased busy_timeout to 15 seconds to handle Litestream sync operations
+        cursor.execute("PRAGMA busy_timeout=15000")
         cursor.close()
 
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)
