@@ -13,7 +13,8 @@ cleanup() {
     # Only sync if Litestream is enabled and config exists
     if [ "${LITESTREAM_ENABLED:-false}" = "true" ] && [ -f /app/litestream.yml ]; then
         echo "🔄 Syncing Litestream..."
-        litestream replicas sync "$DB_PATH" -config /app/litestream.yml || true
+        export LITESTREAM_CONFIG=/app/litestream.yml
+        litestream replicas sync "$DB_PATH" || true
         echo "✅ Litestream sync complete"
     else
         echo "⏭️  Skipping Litestream sync (not configured)"
@@ -72,6 +73,8 @@ dbs:
         wal-mode: true
 EOF
     echo "✅ Litestream configuration generated"
+    # Set LITESTREAM_CONFIG environment variable so Litestream can find the config
+    export LITESTREAM_CONFIG=/app/litestream.yml
 else
     echo "⚠️  Warning: Litestream credentials not configured"
     echo "📝 Continuing without database replication (set LITESTREAM_* env vars in Render Dashboard)"
@@ -84,7 +87,7 @@ if [ ! -f "$DB_PATH" ]; then
     
     # Attempt to restore from Litestream/R2 only if credentials are configured
     if [ "$LITESTREAM_ENABLED" = "true" ]; then
-        if litestream restore -config /app/litestream.yml "$DB_PATH" 2>/dev/null; then
+        if litestream restore -o "$DB_PATH" 2>/dev/null; then
             echo "✅ Database restored from Litestream backup"
         else
             echo "⚠️  No backup found, starting with fresh database"
@@ -99,7 +102,7 @@ fi
 # Start Litestream replication in background only if credentials are configured
 if [ "$LITESTREAM_ENABLED" = "true" ]; then
     echo "🔄 Starting Litestream replication..."
-    litestream replicate "$DB_PATH" -config /app/litestream.yml &
+    litestream replicate &
     
     # Wait a moment for Litestream to initialize
     sleep 2
