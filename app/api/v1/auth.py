@@ -1,8 +1,17 @@
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Response, Request, status
 from sqlalchemy.orm import Session
+from typing import List
 from ...deps import get_db, get_current_user
-from ...schemas.auth import SignUpIn, LoginIn, TokenOut
+from ...schemas.auth import (
+    SignUpIn,
+    LoginIn,
+    TokenOut,
+    SecurityQuestionOut,
+    PasswordResetSecurityIn,
+)
 from ...models.user import User
+from ...models.security_question import SecurityQuestion
 from ...core.security import (
     hash_password, verify_password, create_token, create_refresh_token,
     rotate_refresh_token, revoke_token, revoke_user_tokens
@@ -15,6 +24,15 @@ from ...core.logging import security_logger
 from ...core.errors import (
     AuthenticationError, ValidationError, RateLimitError, 
     InternalServerError, APIError
+)
+from ...services.security_questions import (
+    hash_security_answer,
+    verify_security_answer,
+    get_active_question,
+    reset_attempts_if_window_expired,
+    record_failed_attempt,
+    clear_security_lock,
+    ensure_default_questions,
 )
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -33,6 +51,19 @@ def set_refresh_cookie(resp: Response, token: str):
 
 def clear_cookies(resp: Response):
     resp.delete_cookie("refresh_token", path="/api/v1/auth", domain=settings.COOKIE_DOMAIN)
+
+@router.get("/security-questions", response_model=List[SecurityQuestionOut])
+def list_security_questions(db: Session = Depends(get_db)):
+    """Public listing of available security questions"""
+    ensure_default_questions(db)
+    questions = (
+        db.query(SecurityQuestion)
+        .filter(SecurityQuestion.is_active.is_(True))
+        .order_by(SecurityQuestion.id)
+        .all()
+    )
+    return questions
+
 
 @router.post("/signup", status_code=201)
 def signup(payload: SignUpIn, request: Request, db: Session = Depends(get_db)):
@@ -59,8 +90,19 @@ def signup(payload: SignUpIn, request: Request, db: Session = Depends(get_db)):
             )
             raise ValidationError("Email already registered")
         
+        question = get_active_question(db, payload.security_question_id)
+        if not question:
+            raise ValidationError("Invalid security question selection")
+
+        answer_hash = hash_security_answer(payload.security_answer)
+
         # Create new user
-        u = User(email=email, password_hash=hash_password(password))
+        u = User(
+            email=email,
+            password_hash=hash_password(password),
+            security_question_id=question.id,
+            security_answer_hash=answer_hash,
+        )
         db.add(u)
         db.commit()
         db.refresh(u)
@@ -350,3 +392,82 @@ def reset_password(payload: dict, request: Request, db: Session = Depends(get_db
             client_ip
         )
         raise InternalServerError("Password reset failed")
+
+@router.post("/password-reset-question")
+def reset_password_with_security_question(
+    payload: PasswordResetSecurityIn, request: Request, db: Session = Depends(get_db)
+):
+    """Reset password after validating a stored security question"""
+    client_ip = request.client.host if request.client else "unknown"
+
+    try:
+        if not allow(client_ip, "auth"):
+            security_logger.log_rate_limit_exceeded("/auth/password-reset-question", client_ip, 5, 300)
+            raise RateLimitError("Too many attempts, try later")
+
+        email = validate_email(payload.email)
+        new_password = validate_password(payload.new_password)
+
+        user = db.query(User).filter(User.email == email).first()
+        if not user or not user.security_question_id or not user.security_answer_hash:
+            security_logger.log_auth_failure(
+                email=email,
+                ip_address=client_ip,
+                reason="Security question reset unavailable",
+            )
+            raise AuthenticationError("Invalid security question or answer")
+
+        now = datetime.utcnow()
+        reset_attempts_if_window_expired(user, now)
+
+        if user.security_blocked_until and user.security_blocked_until > now:
+            db.commit()
+            raise RateLimitError("Security question reset locked for 24 hours due to failures")
+
+        if user.security_question_id != payload.security_question_id:
+            record_failed_attempt(user, now)
+            db.commit()
+            security_logger.log_auth_failure(
+                email=email,
+                ip_address=client_ip,
+                reason="Incorrect security question selected",
+            )
+            if user.security_blocked_until and user.security_blocked_until > now:
+                raise RateLimitError("Security question reset locked for 24 hours due to failures")
+            raise AuthenticationError("Invalid security question or answer")
+
+        if not verify_security_answer(payload.security_answer, user.security_answer_hash):
+            record_failed_attempt(user, now)
+            db.commit()
+            security_logger.log_auth_failure(
+                email=email,
+                ip_address=client_ip,
+                reason="Incorrect security answer",
+            )
+            if user.security_blocked_until and user.security_blocked_until > now:
+                raise RateLimitError("Security question reset locked for 24 hours due to failures")
+            raise AuthenticationError("Invalid security question or answer")
+
+        user.password_hash = hash_password(new_password)
+        clear_security_lock(user)
+        user.updated_at = datetime.utcnow()
+        db.commit()
+
+        security_logger.log_auth_attempt(
+            email=email,
+            ip_address=client_ip,
+            success=True,
+            user_id=user.id,
+        )
+
+        return {"message": "Password reset successfully"}
+
+    except (AuthenticationError, ValidationError, RateLimitError):
+        raise
+    except Exception as e:
+        security_logger.log_security_violation(
+            "security_question_reset_error",
+            {"error": str(e), "email": payload.email},
+            client_ip,
+        )
+        raise InternalServerError("Security question reset failed")

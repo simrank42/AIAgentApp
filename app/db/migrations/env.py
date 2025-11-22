@@ -12,6 +12,7 @@ from app.models.user import User  # noqa
 from app.models.agent import Agent  # noqa
 from app.models.session import ChatSession  # noqa
 from app.models.message import Message  # noqa
+from app.models.security_question import SecurityQuestion  # noqa
 
 config = context.config
 if config.get_main_option("sqlalchemy.url") is None:
